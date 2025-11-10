@@ -10,7 +10,7 @@ app.use(cors());
 app.use(bodyParser.json({ limit: "25mb" }));
 
 const PORT = process.env.PORT || 3000;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const OPENAI_API_KEY = (process.env.OPENAI_API_KEY || "").trim();
 
 if (!OPENAI_API_KEY) {
   console.error("❌ ERROR: Falta la API key de OpenAI. Definila en Render como variable de entorno.");
