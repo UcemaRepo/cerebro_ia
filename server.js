@@ -44,7 +44,7 @@ app.post("/api/analyze-image", async (req, res) => {
     const { base64, prompt = "Describe detalladamente esta imagen" } = req.body;
 
     const payload = {
-      model: "gpt-4.1-mini",
+      model: "gpt-4",
       input: [
         {
           role: "user",
