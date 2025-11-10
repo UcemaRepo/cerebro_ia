@@ -111,6 +111,8 @@ try {
 
 console.log("✅ Respuesta OpenAI interpretada:", textOutput);
 res.json({ text: textOutput, raw: data });
+      }
+});
 
 
 
