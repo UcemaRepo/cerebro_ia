@@ -12,6 +12,11 @@ app.use(bodyParser.json({ limit: "25mb" }));
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+if (!OPENAI_API_KEY) {
+  console.error("❌ ERROR: Falta la API key de OpenAI. Definila en Render como variable de entorno.");
+  process.exit(1);
+}
+
 // === Endpoint para texto ===
 app.post("/api/chat", async (req, res) => {
   try {
@@ -33,7 +38,7 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-// === Endpoint para imágenes (GPT-4V) ===
+// === Endpoint para imágenes ===
 app.post("/api/analyze-image", async (req, res) => {
   try {
     const { base64, prompt = "Describe detalladamente esta imagen" } = req.body;
