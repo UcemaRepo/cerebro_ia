@@ -39,6 +39,7 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // === Endpoint para imágenes ===
+// === Endpoint para imágenes ===
 app.post("/api/analyze-image", async (req, res) => {
   try {
     const { base64, prompt = "Describe detalladamente esta imagen" } = req.body;
@@ -78,41 +79,44 @@ app.post("/api/analyze-image", async (req, res) => {
       return res.status(400).json({ error: data });
     }
 
-    // 🧠 Extraer texto de forma segura sin importar el formato
     // 🧠 Extraer texto de forma segura según estructura /v1/responses real
-let textOutput = "⚠️ No se pudo interpretar la respuesta del modelo.";
+    let textOutput = "⚠️ No se pudo interpretar la respuesta del modelo.";
 
-try {
-  if (data.output_text) {
-    textOutput = data.output_text;
-  } 
-  else if (Array.isArray(data.output)) {
-    // Nuevo formato de salida (2025)
-    for (const item of data.output) {
-      if (Array.isArray(item.content)) {
-        for (const block of item.content) {
-          if (block.type === "output_text" && block.text) {
-            textOutput = block.text;
-            break;
+    try {
+      if (data.output_text) {
+        textOutput = data.output_text;
+      } 
+      else if (Array.isArray(data.output)) {
+        for (const item of data.output) {
+          if (Array.isArray(item.content)) {
+            for (const block of item.content) {
+              if (block.type === "output_text" && block.text) {
+                textOutput = block.text;
+                break;
+              }
+            }
           }
         }
-      }
+      } 
+      else if (data.output?.[0]?.content?.[0]?.text) {
+        textOutput = data.output[0].content[0].text;
+      } 
+      else if (data.choices?.[0]?.message?.content) {
+        textOutput = data.choices[0].message.content;
+      } 
+    } catch (extractErr) {
+      console.warn("⚠️ Error interpretando respuesta:", extractErr);
     }
-  }
-  else if (data.output?.[0]?.content?.[0]?.text) {
-    textOutput = data.output[0].content[0].text;
-  } 
-  else if (data.choices?.[0]?.message?.content) {
-    textOutput = data.choices[0].message.content;
-  } 
-} catch (extractErr) {
-  console.warn("⚠️ Error interpretando respuesta:", extractErr);
-}
 
-console.log("✅ Respuesta OpenAI interpretada:", textOutput);
-res.json({ text: textOutput, raw: data });
-      }
+    console.log("✅ Respuesta OpenAI interpretada:", textOutput);
+    res.json({ text: textOutput, raw: data });
+
+  } catch (err) {
+    console.error("❌ Error en /api/analyze-image:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
+
 
 
 
