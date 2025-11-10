@@ -6,14 +6,25 @@ import bodyParser from "body-parser";
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+// ✅ CORS completamente abierto (para desarrollo y extensiones)
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 app.use(bodyParser.json({ limit: "25mb" }));
 
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = (process.env.OPENAI_API_KEY || "").trim();
 
 if (!OPENAI_API_KEY) {
-  console.error("❌ ERROR: Falta la API key de OpenAI. Definila en Render como variable de entorno.");
+  console.error("❌ Falta la API key de OpenAI");
   process.exit(1);
 }
 
