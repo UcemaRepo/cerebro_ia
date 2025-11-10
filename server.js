@@ -43,6 +43,13 @@ app.post("/api/analyze-image", async (req, res) => {
   try {
     const { base64, prompt = "Describe detalladamente esta imagen" } = req.body;
 
+    console.log("📦 Longitud base64 recibida:", base64?.length || 0);
+
+    // Detectar si es una DataURL (data:image/png;base64,...)
+    const imagePayload = base64.startsWith("data:image/")
+      ? { type: "input_image", image_url: base64 } // soporta dataURL correctamente
+      : { type: "input_image", image_url: `data:image/png;base64,${base64}` };
+
     const payload = {
       model: "gpt-5",
       input: [
@@ -50,7 +57,7 @@ app.post("/api/analyze-image", async (req, res) => {
           role: "user",
           content: [
             { type: "input_text", text: prompt },
-            { type: "input_image", image_url: base64 }
+            imagePayload
           ]
         }
       ]
@@ -66,17 +73,27 @@ app.post("/api/analyze-image", async (req, res) => {
     });
 
     const data = await r.json();
+
+    if (!r.ok) {
+      console.error("❌ Error en respuesta OpenAI:", data);
+      return res.status(400).json({ error: data });
+    }
+
+    console.log("✅ Respuesta OpenAI:", data.output_text || data.output?.[0]?.content?.[0]?.text);
     res.json(data);
   } catch (err) {
+    console.error("💥 Error en /api/analyze-image:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // === Ping de salud ===
 app.get("/", (req, res) => {
   res.send("🧠 Cerbero OpenAI activo y listo.");
 });
 console.log("🧠 OPENAI_API_KEY:", JSON.stringify(OPENAI_API_KEY));
+
 
 
 app.listen(PORT, () => console.log(`✅ Servidor Cerbero activo en puerto ${PORT}`));
