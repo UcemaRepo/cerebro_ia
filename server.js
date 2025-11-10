@@ -43,12 +43,11 @@ app.post("/api/analyze-image", async (req, res) => {
   try {
     const { base64, prompt = "Describe detalladamente esta imagen" } = req.body;
 
-    console.log("📦 Longitud base64 recibida:", base64?.length || 0);
+    if (!base64) {
+      return res.status(400).json({ error: "No se recibió la imagen base64" });
+    }
 
-    // Detectar si es una DataURL (data:image/png;base64,...)
-    const imagePayload = base64.startsWith("data:image/")
-      ? { type: "input_image", image_url: base64 } // soporta dataURL correctamente
-      : { type: "input_image", image_url: `data:image/png;base64,${base64}` };
+    console.log("📦 Longitud base64 recibida:", base64.length);
 
     const payload = {
       model: "gpt-5",
@@ -57,7 +56,7 @@ app.post("/api/analyze-image", async (req, res) => {
           role: "user",
           content: [
             { type: "input_text", text: prompt },
-            imagePayload
+            { type: "input_image", image_url: base64 }
           ]
         }
       ]
@@ -79,13 +78,30 @@ app.post("/api/analyze-image", async (req, res) => {
       return res.status(400).json({ error: data });
     }
 
-    console.log("✅ Respuesta OpenAI:", data.output_text || data.output?.[0]?.content?.[0]?.text);
-    res.json(data);
+    // 🧠 Extraer texto de forma segura sin importar el formato
+    let textOutput = "⚠️ No se pudo interpretar la respuesta del modelo.";
+
+    if (data.output_text) {
+      textOutput = data.output_text;
+    } else if (Array.isArray(data.output)) {
+      const contentArray = data.output[0]?.content;
+      if (Array.isArray(contentArray)) {
+        const textPart = contentArray.find(c => c.type === "output_text");
+        if (textPart?.text) textOutput = textPart.text;
+      }
+    } else if (data.choices?.[0]?.message?.content) {
+      textOutput = data.choices[0].message.content;
+    }
+
+    console.log("✅ Respuesta OpenAI:", textOutput);
+
+    res.json({ text: textOutput, raw: data });
   } catch (err) {
-    console.error("💥 Error en /api/analyze-image:", err);
+    console.error("❌ Error general en /api/analyze-image:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
 
 
 // === Ping de salud ===
