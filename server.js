@@ -76,5 +76,7 @@ app.post("/api/analyze-image", async (req, res) => {
 app.get("/", (req, res) => {
   res.send("🧠 Cerbero OpenAI activo y listo.");
 });
+console.log("🧠 OPENAI_API_KEY:", JSON.stringify(OPENAI_API_KEY));
+
 
 app.listen(PORT, () => console.log(`✅ Servidor Cerbero activo en puerto ${PORT}`));
