@@ -79,28 +79,39 @@ app.post("/api/analyze-image", async (req, res) => {
     }
 
     // 🧠 Extraer texto de forma segura sin importar el formato
-    let textOutput = "⚠️ No se pudo interpretar la respuesta del modelo.";
+    // 🧠 Extraer texto de forma segura según estructura /v1/responses real
+let textOutput = "⚠️ No se pudo interpretar la respuesta del modelo.";
 
-    if (data.output_text) {
-      textOutput = data.output_text;
-    } else if (Array.isArray(data.output)) {
-      const contentArray = data.output[0]?.content;
-      if (Array.isArray(contentArray)) {
-        const textPart = contentArray.find(c => c.type === "output_text");
-        if (textPart?.text) textOutput = textPart.text;
+try {
+  if (data.output_text) {
+    textOutput = data.output_text;
+  } 
+  else if (Array.isArray(data.output)) {
+    // Nuevo formato de salida (2025)
+    for (const item of data.output) {
+      if (Array.isArray(item.content)) {
+        for (const block of item.content) {
+          if (block.type === "output_text" && block.text) {
+            textOutput = block.text;
+            break;
+          }
+        }
       }
-    } else if (data.choices?.[0]?.message?.content) {
-      textOutput = data.choices[0].message.content;
     }
-
-    console.log("✅ Respuesta OpenAI:", textOutput);
-
-    res.json({ text: textOutput, raw: data });
-  } catch (err) {
-    console.error("❌ Error general en /api/analyze-image:", err);
-    res.status(500).json({ error: err.message });
   }
-});
+  else if (data.output?.[0]?.content?.[0]?.text) {
+    textOutput = data.output[0].content[0].text;
+  } 
+  else if (data.choices?.[0]?.message?.content) {
+    textOutput = data.choices[0].message.content;
+  } 
+} catch (extractErr) {
+  console.warn("⚠️ Error interpretando respuesta:", extractErr);
+}
+
+console.log("✅ Respuesta OpenAI interpretada:", textOutput);
+res.json({ text: textOutput, raw: data });
+
 
 
 
