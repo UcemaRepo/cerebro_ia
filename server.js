@@ -226,6 +226,55 @@ app.post("/api/convert-image-to-csv", async (req, res) => {
   }
 });
 
+// === 🧠 Memoria persistente del Cerebro ===
+import fs from "fs";
+
+const MEMORY_FILE = "./cerebro_memory.json";
+
+// Cargar memoria inicial
+let memory = {};
+try {
+  if (fs.existsSync(MEMORY_FILE)) {
+    memory = JSON.parse(fs.readFileSync(MEMORY_FILE, "utf-8"));
+    console.log(`🧠 Memoria cargada (${Object.keys(memory).length} entradas)`);
+  }
+} catch (err) {
+  console.error("⚠️ Error cargando memoria:", err);
+  memory = {};
+}
+
+// Guardar memoria en disco
+function saveMemory() {
+  fs.writeFileSync(MEMORY_FILE, JSON.stringify(memory, null, 2));
+}
+
+// Guardar contenido procesado (texto)
+app.post("/api/memory/save", (req, res) => {
+  const { id, type, summary, raw } = req.body;
+  if (!id || !summary) return res.status(400).json({ error: "Faltan datos para guardar." });
+
+  memory[id] = {
+    id,
+    type,
+    summary,
+    raw: raw || null,
+    timestamp: new Date().toISOString()
+  };
+
+  saveMemory();
+  console.log(`💾 Guardado en memoria: ${id} (${type})`);
+  res.json({ ok: true });
+});
+
+// Recuperar todo
+app.get("/api/memory/all", (req, res) => res.json(Object.values(memory)));
+
+// Recuperar por id
+app.get("/api/memory/:id", (req, res) => {
+  const item = memory[req.params.id];
+  if (!item) return res.status(404).json({ error: "No encontrado" });
+  res.json(item);
+});
 
 
 // === Ping de salud ===
