@@ -181,6 +181,50 @@ app.post("/api/analyze-csv", async (req, res) => {
   }
 });
 
+app.post("/api/convert-image-to-csv", async (req, res) => {
+  try {
+    const { base64 } = req.body;
+    if (!base64) return res.status(400).json({ error: "No se recibió la imagen." });
+
+    console.log("🖼️ Solicitando conversión de imagen a CSV...");
+
+    const payload = {
+      model: "gpt-5",
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: "Extraé toda la información tabular o estructurada de esta imagen y devolvela en formato CSV (con encabezados y valores limpios)." },
+            { type: "input_image", image_url: base64 }
+          ]
+        }
+      ]
+    };
+
+    const r = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await r.json();
+    if (!r.ok) return res.status(400).json({ error: data });
+
+    const csvText =
+      data.output_text ||
+      data.output?.[0]?.content?.[0]?.text ||
+      data.choices?.[0]?.message?.content ||
+      "⚠️ No se pudo extraer texto CSV.";
+
+    res.json({ csv: csvText });
+  } catch (err) {
+    console.error("❌ Error en conversión a CSV:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 
