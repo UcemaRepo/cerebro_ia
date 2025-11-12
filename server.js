@@ -128,6 +128,58 @@ app.post("/api/analyze-image", async (req, res) => {
   }
 });
 
+// === Endpoint para analizar archivos CSV ===
+app.post("/api/analyze-csv", async (req, res) => {
+  try {
+    const { base64, prompt = "Analiza este archivo CSV y describe sus principales patrones o conclusiones." } = req.body;
+
+    if (!base64) return res.status(400).json({ error: "No se recibió el CSV en base64." });
+
+    // Convertimos base64 -> texto
+    const csvText = Buffer.from(base64.split(",")[1] || base64, "base64").toString("utf-8");
+    console.log(`📊 CSV recibido (${csvText.length} caracteres)`);
+
+    const payload = {
+      model: "gpt-5",
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: `${prompt}\n\nContenido del CSV:\n${csvText.slice(0, 10000)}` } // límite para no exceder tokens
+          ]
+        }
+      ]
+    };
+
+    const r = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await r.json();
+
+    if (!r.ok) {
+      console.error("❌ Error en respuesta OpenAI:", data);
+      return res.status(400).json({ error: data });
+    }
+
+    let textOutput = "⚠️ No se pudo interpretar la respuesta del modelo.";
+    if (data.output_text) textOutput = data.output_text;
+    else if (data.output?.[0]?.content?.[0]?.text) textOutput = data.output[0].content[0].text;
+    else if (data.choices?.[0]?.message?.content) textOutput = data.choices[0].message.content;
+
+    console.log("✅ Respuesta CSV interpretada:", textOutput.slice(0, 300));
+    res.json({ text: textOutput, raw: data });
+
+  } catch (err) {
+    console.error("❌ Error analizando CSV:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 
 
